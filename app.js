@@ -1,42 +1,76 @@
-const express = require("express");
+const express = require("express")
 const bodyParser = require("body-parser");
+const mongoose = require("mongoose");
 const app = express();
 const port = 3000;
-
-let trails = [
-    {name: "Salmon Creek", image: "https://images.unsplash.com/photo-1562607913-56ccafbaa1fb?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1032&q=80"},
-    {name: "Tuckerman Ravine Trail", image: "https://images.unsplash.com/photo-1560191292-f56f9ae47e45?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=500&q=60"},
-    {name: "Olomana Trail", image: "https://images.unsplash.com/photo-1520927920056-3c8a6f66e0c2?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=500&q=60"},
-    {name: "Salmon Creek", image: "https://images.unsplash.com/photo-1562607913-56ccafbaa1fb?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1032&q=80"},
-    {name: "Tuckerman Ravine Trail", image: "https://images.unsplash.com/photo-1560191292-f56f9ae47e45?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=500&q=60"},
-    {name: "Olomana Trail", image: "https://images.unsplash.com/photo-1520927920056-3c8a6f66e0c2?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=500&q=60"},
-    {name: "Salmon Creek", image: "https://images.unsplash.com/photo-1562607913-56ccafbaa1fb?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1032&q=80"},
-    {name: "Tuckerman Ravine Trail", image: "https://images.unsplash.com/photo-1560191292-f56f9ae47e45?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=500&q=60"},
-    {name: "Olomana Trail", image: "https://images.unsplash.com/photo-1520927920056-3c8a6f66e0c2?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=500&q=60"}
-]
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");
 
+// Connect mongoose.
+mongoose.connect('mongodb://localhost:27017/hiking_review_club', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('Connected to DB!'))
+.catch(error => console.log(error.message));
+
+// SCHEMA SETUP
+let trailSchema = new mongoose.Schema({
+    name: String,
+    image: String,
+    description: String
+});
+
+// Model
+let Trail = mongoose.model("Trail", trailSchema);
+
+
+// Landing page
 app.get("/", function(req, res){
     res.render("landing");
 })
 
+// INDEX - show all trails.
 app.get("/trails", function(req, res){
-    res.render("trails", {trails: trails});
+    Trail.find({}, function(err, allTrails){
+        if(err){
+            console.log(err);
+        } else {
+            res.render("index", {trails: allTrails});
+        }
+    });
 });
 
+// adds new trail to db
 app.post("/trails", function(req, res){
     let name = req.body.name;
     let image = req.body.image;
-    let newTrail = {name: name, image: image}
-    trails.push(newTrail);
-
-    res.redirect("/trails")
+    let desc = req.body.description;
+    let newTrail = {name: name, image: image, description: desc}
+    Trail.create(newTrail, function(err, newlyAddedTrail){
+        if(err) {
+            console.log(err);
+        } else {
+            res.redirect("/trails");
+        }
+    });
 });
 
 app.get("/trails/new", function(req, res){
     res.render("new");
+});
+
+// SHOW - shows more info about trail.
+app.get("/trails/:id", function(req, res){
+    // Find trail with provided ID.
+    Trail.findById(req.params.id, function(err, foundTrail){
+        if(err){
+            console.log(err);
+        } else {
+            res.render("show", {trail: foundTrail});
+        }
+    });
 });
 
 app.listen(port, function(){

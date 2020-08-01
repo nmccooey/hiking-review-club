@@ -1,31 +1,28 @@
 const express = require("express")
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
+const Trail = require("./models/trail");
+const Comment = require("./models/comment");
+const seedDB = require("./seeds");
+
 const app = express();
 const port = 3000;
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.set("view engine", "ejs");
+app.use(express.static(__dirname + "/public"));
 
+
+seedDB();
 // Connect mongoose.
 mongoose.connect('mongodb://localhost:27017/hiking_review_club', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 })
 .then(() => console.log('Connected to DB!'))
 .catch(error => console.log(error.message));
 
-// SCHEMA SETUP
-let trailSchema = new mongoose.Schema({
-    name: String,
-    image: String,
-    description: String
-});
-
-// Model
-let Trail = mongoose.model("Trail", trailSchema);
-
-
+// ROUTES
 // Landing page
 app.get("/", function(req, res){
     res.render("landing");
@@ -37,7 +34,7 @@ app.get("/trails", function(req, res){
         if(err){
             console.log(err);
         } else {
-            res.render("index", {trails: allTrails});
+            res.render("trails/index", {trails: allTrails});
         }
     });
 });
@@ -58,17 +55,47 @@ app.post("/trails", function(req, res){
 });
 
 app.get("/trails/new", function(req, res){
-    res.render("new");
+    res.render("trails/new");
 });
 
 // SHOW - shows more info about trail.
 app.get("/trails/:id", function(req, res){
     // Find trail with provided ID.
-    Trail.findById(req.params.id, function(err, foundTrail){
+    Trail.findById(req.params.id).populate("comments").exec(function(err, foundTrail){
         if(err){
             console.log(err);
         } else {
-            res.render("show", {trail: foundTrail});
+            res.render("trails/show", {trail: foundTrail});
+        }
+    });
+});
+
+// COMMENT ROUTES
+app.get("/trails/:id/comments/new", function(req, res){
+    Trail.findById(req.params.id,function(err, trail){
+        if(err){
+            console.log(err);
+        } else {
+            res.render("comments/new", {trail: trail});
+        }
+    });
+});
+
+app.post("/trails/:id/comments", function(req, res){
+    Trail.findById(req.params.id, function(err, trail) {
+        if(err) {
+            console.log(err);
+            res.redirect("/trails");
+        } else {
+            Comment.create(req.body.comment, function(err, comment){
+                if(err){
+                    console.log(err);
+                } else {
+                    trail.comments.push(comment);
+                    trail.save();
+                    res.redirect("/trails/" + trail._id);
+                }
+            });
         }
     });
 });

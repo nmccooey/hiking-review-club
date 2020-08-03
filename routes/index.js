@@ -18,11 +18,12 @@ router.post("/register", function(req, res){
     let newUser = new User({username: req.body.username});
     User.register(newUser, req.body.password, function(err, user){
         if(err){
-            console.log(err);
+            req.flash("error", err.message);
             return res.render("register");
         }
         passport.authenticate("local")(req, res, function(){
-           res.redirect("/trails"); 
+            req.flash("success", "Welcome to the Hiking Review Club " + user.username);
+            res.redirect("/trails"); 
         });
     });
 });
@@ -40,18 +41,11 @@ router.post("/login", passport.authenticate("local",
     }), function(req, res){
 });
 
-// Logic route
+// Logout route
 router.get("/logout", function(req, res){
     req.logout();
+    req.flash("success", "You Logged Out");
     res.redirect("/trails");
 });
- 
-// Middleware
-function isLoggedIn(req, res, next){
-    if(req.isAuthenticated()){
-        return next();
-    }
-    res.redirect("/login");
-}
 
 module.exports = router;

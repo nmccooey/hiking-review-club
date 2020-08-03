@@ -18,18 +18,22 @@ router.post("/", function(req, res){
     let name = req.body.name;
     let image = req.body.image;
     let desc = req.body.description;
-    let newTrail = {name: name, image: image, description: desc}
+    let author = {
+        id: req.user._id,
+        username: req.user.username
+    }
+    let newTrail = {name: name, image: image, description: desc, author: author}
     Trail.create(newTrail, function(err, newlyAddedTrail){
         if(err) {
             console.log(err);
         } else {
-            res.redirect("/");
+            res.redirect("/trails");
         }
     });
 });
 
 // NEW - show form to create new trail
-router.get("/new", function(req, res){
+router.get("/new", isLoggedIn, function(req, res){
     res.render("trails/new");
 });
 
@@ -44,5 +48,13 @@ router.get("/:id", function(req, res){
         }
     });
 });
+
+// Middleware
+function isLoggedIn(req, res, next){
+    if(req.isAuthenticated()){
+        return next();
+    }
+    res.redirect("/login");
+}
 
 module.exports = router;

@@ -25,6 +25,12 @@ router.post("/", isLoggedIn, function(req, res){
                 if(err){
                     console.log(err);
                 } else {
+                    // add id and username to comment.
+                    comment.author.id = req.user._id;
+                    comment.author.username = req.user.username;
+
+                    // save comment.
+                    comment.save();
                     trail.comments.push(comment);
                     trail.save();
                     res.redirect("/trails/" + trail._id);
